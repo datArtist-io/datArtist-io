@@ -1,7 +1,7 @@
 // Rebuilds every SVG in ../assets. With GITHUB_TOKEN set (the daily workflow), it first refreshes
 // ../data.json from GitHub: repositories, languages, followers and the contribution calendar.
 import fs from "node:fs";
-import { card, contrib, button } from "./profile.mjs";
+import { card, contrib, button, hero } from "./profile.mjs";
 import { write } from "./lib.mjs";
 
 const LOGIN = "datArtist-io";
@@ -39,6 +39,7 @@ async function refresh() {
 const data = process.env.GITHUB_TOKEN ? await refresh() : JSON.parse(fs.readFileSync(DATA, "utf8"));
 const out = [];
 for (const k of ["dark", "light"]) {
+  out.push(write(`${OUT}/hero-${k}.svg`, hero(k)));
   out.push(write(`${OUT}/card-${k}.svg`, card(k, data.stats)));
   out.push(write(`${OUT}/contributions-${k}.svg`, contrib(k, data.days)));
   for (const [name, label, opt] of [

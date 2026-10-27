@@ -62,7 +62,8 @@ function dotEarth(t, { cx, cy, r, step = 6.4 }) {
     <path d="${ocean}" stroke="${t.dim}" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
     ${groups.map((d) => (d.length ? g(d.join(""), "p") : "")).join("")}
     ${g(accent.join(""), "p acc")}
-    <circle cx="${cx}" cy="${cy}" r="${r}" stroke="url(#rim)" stroke-width="1.2" opacity=".8"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#sun)"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" stroke="url(#spin)" stroke-width="1.6"/>
     <g class="l" style="animation-delay:1.3s">${links}${hubs}</g>
     <ellipse cx="${cx}" cy="${cy}" rx="${r + 40}" ry="${(r + 40) * 0.24}" stroke="${t.panelLine}" transform="rotate(-16 ${cx} ${cy})"/>
     <circle r="3" fill="${brand.cyan}"><animateMotion dur="16s" repeatCount="indefinite" path="M${cx - r - 40} ${cy} a${r + 40} ${(r + 40) * 0.24} 0 1 0 ${2 * (r + 40)} 0 a${r + 40} ${(r + 40) * 0.24} 0 1 0 ${-2 * (r + 40)} 0"/></circle>`;
@@ -125,25 +126,29 @@ function glyphDots(t, { cx, cy, w, step = 5.4 }) {
 }
 
 // ---------- info panel rows ----------
-function row(t, y, key, val, x0, x1, delay, { valFill } = {}) {
+function row(t, y, key, val, x0, x1, delay, { valFill, live = false } = {}) {
   const kw = width(key, fonts.monoMed, 14);
-  const vw = width(val, fonts.mono, 14);
+  const vw = width(val, fonts.mono, 14) + (live ? 18 : 0);
   return `<g class="l" style="animation-delay:${delay}s">
-    ${text(key, { font: fonts.monoMed, size: 14, x: x0, y, fill: t.key })}
-    <line x1="${x0 + kw + 10}" y1="${y - 4}" x2="${x1 - vw - 10}" y2="${y - 4}" stroke="${t.lead}" stroke-width="1.4" stroke-dasharray="1.4 5" stroke-linecap="round"/>
+    ${text(key, { font: fonts.monoMed, size: 14, x: x0, y, fill: "url(#ksh)" })}
+    <line x1="${x0 + kw + 10}" y1="${y - 4}" x2="${x1 - vw - 10}" y2="${y - 4}" stroke="${t.lead}" stroke-width="1.4" stroke-dasharray="1.4 5" stroke-linecap="round" class="lead"/>
+    ${live ? `<circle cx="${x1 - vw + 5}" cy="${y - 4.5}" r="4" fill="#3ddc97"/><circle cx="${x1 - vw + 5}" cy="${y - 4.5}" r="4" fill="none" stroke="#3ddc97" stroke-width="1.5"><animate attributeName="r" values="4;11" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="1.8s" repeatCount="indefinite"/></circle>` : ""}
     ${text(val, { font: fonts.mono, size: 14, x: x1, y, anchor: "end", fill: valFill ?? t.ink })}</g>`;
 }
 function rule(t, y, label, x0, x1, delay) {
   const w = width(label, fonts.monoMed, 13.5, 0.04);
   return `<g class="l" style="animation-delay:${delay}s">${text("—", { font: fonts.mono, size: 13.5, x: x0, y, fill: t.faint })}${text(label, { font: fonts.monoMed, size: 13.5, x: x0 + 18, y, fill: t.ink, track: 0.04 })}
-    <line x1="${x0 + 30 + w}" y1="${y - 4.5}" x2="${x1}" y2="${y - 4.5}" stroke="${t.lead}" stroke-width="1"/></g>`;
+    <line x1="${x0 + 30 + w}" y1="${y - 4.5}" x2="${x1}" y2="${y - 4.5}" stroke="${t.lead}" stroke-width="1"/>
+    <rect x="${x0 + 30 + w}" y="${y - 5.5}" width="70" height="2" rx="1" fill="url(#beam)"><animate attributeName="x" values="${x0 + 30 + w - 70};${x1}" dur="${(3.2 + (y % 5) * 0.3).toFixed(1)}s" begin="${(delay % 2).toFixed(2)}s" repeatCount="indefinite"/></rect></g>`;
 }
+let PILLS = [];
 function pills(t, x, y, items, delay, max) {
   let cx = x, cy = y, out = "";
   for (const it of items) {
     const w = width(it, fonts.bodyMed, 13) + 22;
     if (cx + w > max) { cx = x; cy += 30; }
-    out += `<rect x="${cx}" y="${cy}" width="${w}" height="24" rx="12" fill="${t.pill}" stroke="${t.pillLine}"/>${text(it, { font: fonts.bodyMed, size: 13, x: cx + 11, y: cy + 16.5, fill: t.ink })}`;
+    PILLS.push(`<rect x="${cx}" y="${cy}" width="${w}" height="24" rx="12" fill="#fff"/>`);
+    out += `<rect x="${cx}" y="${cy}" width="${w}" height="24" rx="12" fill="${t.pill}" stroke="${t.pillLine}"/><rect x="${cx + 1}" y="${cy + 1}" width="${w - 2}" height="11" rx="11" fill="url(#spec)"/>${text(it, { font: fonts.bodyMed, size: 13, x: cx + 11, y: cy + 16.5, fill: t.ink })}`;
     cx += w + 7;
   }
   return { svg: `<g class="l" style="animation-delay:${delay}s">${out}</g>`, bottom: cy + 24 };
@@ -160,8 +165,8 @@ function modeSwitch(t, x, y, w) {
   ];
   const cycle = 10.5;
   return `<g class="l" style="animation-delay:.95s">
-    <rect x="${x}" y="${y}" width="${w}" height="40" rx="20" fill="${t.pill}" stroke="${t.pillLine}"/>
-    <rect x="${x + 4}" y="${y + 4}" width="${sw}" height="32" rx="16" fill="url(#thumb)" class="thumb"/>
+    <rect x="${x}" y="${y}" width="${w}" height="40" rx="20" fill="${t.pill}" stroke="url(#spin)" stroke-width="1.2"/>
+    <g class="thumb"><rect x="${x + 4}" y="${y + 4}" width="${sw}" height="32" rx="16" fill="url(#thumb)" style="filter:drop-shadow(0 6px 14px rgba(123,92,255,.45))"/><rect x="${x + 6}" y="${y + 5}" width="${sw - 4}" height="14" rx="7" fill="url(#spec)"/></g>
     ${seg.map((s, i) => text(s, { font: fonts.bodySemi, size: 14.5, x: x + 4 + sw * i + sw / 2, y: y + 25.5, anchor: "middle", fill: t.ink })).join("")}
     ${captions.map((c, i) => `<g class="cap c${i}">${text(c, { font: fonts.body, size: 15, x, y: y + 66, fill: t.soft })}</g>`).join("")}
   </g>`;
@@ -197,6 +202,7 @@ function prompt(t, x, y) {
 
 export function card(k, stats = { repos: 5, contributions: 107, languages: 4, followers: 9 }) {
   const t = P[k];
+  PILLS = [];
   const W = 1012, H = 892;
   const L = { x: 20, y: 52, w: 420, h: 560 };
   const x0 = 474, x1 = 990;
@@ -210,7 +216,7 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
     ["Status", "Shipping backline"],
     ["Education", "B.Eng Mechanical Engineering · FUTA"],
   ];
-  rows.forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (0.32 + i * 0.06).toFixed(2))));
+  rows.forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (0.32 + i * 0.06).toFixed(2), { live: a === "Status" })));
   y += 22;
   right += modeSwitch(t, x0, y, x1 - x0);
   y += 112;
@@ -255,6 +261,8 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
     .map(([n, l], i) => {
       const tx = L.x + i * (tw + 10);
       return `<g class="l" style="animation-delay:${(1.2 + i * 0.1).toFixed(2)}s"><rect x="${tx}" y="${L.y + L.h + 16}" width="${tw}" height="70" rx="16" fill="${t.panel}" stroke="${t.panelLine}"/>
+        <rect x="${tx + 1}" y="${L.y + L.h + 17}" width="${tw - 2}" height="30" rx="15" fill="url(#spec)" opacity=".7"/>
+        <rect x="${tx}" y="${L.y + L.h + 16}" width="${tw}" height="70" rx="16" stroke="url(#rim)" stroke-width="1.6" class="tglow" style="animation-delay:${(i * 1.1).toFixed(1)}s"/>
         ${text(n, { font: fonts.display, size: 24, x: tx + tw / 2, y: L.y + L.h + 52, anchor: "middle", fill: "url(#psh)" })}
         ${text(l, { font: fonts.body, size: 12, x: tx + tw / 2, y: L.y + L.h + 72, anchor: "middle", fill: t.soft })}</g>`;
     })
@@ -272,28 +280,43 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
   .cap{opacity:0;animation:cap 10.5s ease-in-out infinite}.c1{animation-delay:3.5s}.c2{animation-delay:7s}
   @keyframes cap{0%{opacity:0;transform:translateY(5px)}4%,27%{opacity:1;transform:none}32%,100%{opacity:0}}
   .scanv{animation:scanv 6s ease-in-out infinite}@keyframes scanv{0%{transform:translateY(0);opacity:0}10%{opacity:.6}90%{opacity:.6}100%{transform:translateY(440px);opacity:0}}
+  .lead{animation:lead 1.6s linear infinite}@keyframes lead{to{stroke-dashoffset:-12.8}}
+  .shimmer{animation:shim 4.5s cubic-bezier(.45,0,.2,1) infinite;transform:translateX(330px) skewX(-20deg)}@keyframes shim{0%{transform:translateX(330px) skewX(-20deg)}70%,100%{transform:translateX(1100px) skewX(-20deg)}}
+  .tglow{opacity:0;animation:tglow 4.4s ease-in-out infinite}@keyframes tglow{0%,100%{opacity:0}12%{opacity:1}30%{opacity:0}}
   @media (prefers-reduced-motion: reduce){.p,.l,.cap.c0{opacity:1}}`;
 
   const body = `<defs>
-    <radialGradient id="n1" cx="20%" cy="30%" r="55%"><stop offset="0" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.3 : 0.16}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity="0"/></radialGradient>
-    <radialGradient id="n2" cx="95%" cy="95%" r="50%"><stop offset="0" stop-color="${brand.pink}" stop-opacity="${k === "dark" ? 0.22 : 0.12}"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="n1" cx="20%" cy="30%" r="55%"><animate attributeName="cx" values="20%;34%;20%" dur="16s" repeatCount="indefinite"/><animate attributeName="cy" values="30%;55%;30%" dur="21s" repeatCount="indefinite"/><stop offset="0" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.3 : 0.16}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="n2" cx="95%" cy="95%" r="50%"><animate attributeName="cx" values="95%;70%;95%" dur="19s" repeatCount="indefinite"/><stop offset="0" stop-color="${brand.pink}" stop-opacity="${k === "dark" ? 0.22 : 0.12}"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="0"/></radialGradient>
     <radialGradient id="glow"><stop offset="0" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.22 : 0.12}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity="0"/></radialGradient>
     <radialGradient id="halo"><stop offset=".72" stop-color="${brand.violet}" stop-opacity="0"/><stop offset=".86" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.28 : 0.18}"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="0"/></radialGradient>
     <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${brand.cyan}"/><stop offset=".5" stop-color="${brand.violet}"/><stop offset="1" stop-color="${brand.pink}"/></linearGradient>
     <linearGradient id="corner" x1="0" x2="1"><stop offset="0" stop-color="${brand.pink}"/><stop offset="1" stop-color="${brand.violet}"/></linearGradient>
     <linearGradient id="thumb" x1="0" x2="1"><stop offset="0" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.75 : 0.28}"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="${k === "dark" ? 0.75 : 0.28}"/></linearGradient>
     ${sheen("psh", 6, k === "light")}
+    <linearGradient id="ksh" x1="0" y1="0" x2="${W}" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${t.key}"/><stop offset=".45" stop-color="${t.key}"/><stop offset=".5" stop-color="${k === "dark" ? "#ffd0e6" : "#7b5cff"}"/><stop offset=".55" stop-color="${t.key}"/><stop offset="1" stop-color="${t.key}"/>
+      <animateTransform attributeName="gradientTransform" type="translate" values="-700 0;700 0" dur="5s" repeatCount="indefinite"/></linearGradient>
+    <linearGradient id="spec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${k === "dark" ? 0.18 : 0.95}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="beam" x1="0" x2="1"><stop offset="0" stop-color="${brand.pink}" stop-opacity="0"/><stop offset=".6" stop-color="${brand.pink}"/><stop offset="1" stop-color="#fff"/></linearGradient>
+    <linearGradient id="spin" x1="0" y1="0" x2="${W}" y2="${H}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${brand.cyan}" stop-opacity=".9"/><stop offset=".33" stop-color="${brand.violet}" stop-opacity=".15"/><stop offset=".66" stop-color="${brand.pink}" stop-opacity=".9"/><stop offset="1" stop-color="${brand.violet}" stop-opacity=".15"/>
+      <animateTransform attributeName="gradientTransform" type="rotate" values="0 ${W / 2} ${H / 2};360 ${W / 2} ${H / 2}" dur="12s" repeatCount="indefinite"/></linearGradient>
+    <linearGradient id="shim" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="${k === "dark" ? 0.32 : 0.75}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <radialGradient id="sun" cx="150" cy="270" r="170" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="${k === "dark" ? 0.16 : 0.3}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+      <animate attributeName="cx" values="130;330;130" dur="14s" repeatCount="indefinite"/><animate attributeName="cy" values="250;360;250" dur="14s" repeatCount="indefinite"/></radialGradient>
   </defs>
   <rect width="${W}" height="${H}" rx="22" fill="${t.bg}"/><rect width="${W}" height="${H}" rx="22" fill="url(#n1)"/><rect width="${W}" height="${H}" rx="22" fill="url(#n2)"/>
   <g opacity="${k === "dark" ? 0.8 : 0.35}">${stars(90, W, H, 5, t.star)}</g>
   ${text("NETWORK.MAP", { font: fonts.monoMed, size: 11, x: L.x, y: 34, fill: t.faint, track: 0.22 })}
-  <rect x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" rx="18" fill="${t.panel}" stroke="${t.panelLine}"/>
+  <rect x=".75" y=".75" width="${W - 1.5}" height="${H - 1.5}" rx="21.5" stroke="url(#spin)" stroke-width="1.5"/>
+  <rect x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" rx="18" fill="${t.panel}" stroke="url(#spin)" stroke-width="1.2"/>
   ${[[L.x, L.y, 1, 1], [L.x + L.w, L.y, -1, 1], [L.x, L.y + L.h, 1, -1], [L.x + L.w, L.y + L.h, -1, -1]].map(([cx, cy, sx, sy]) => `<path d="M${cx + 22 * sx} ${cy} H${cx + 8 * sx} Q${cx} ${cy} ${cx} ${cy + 8 * sy} V${cy + 22 * sy}" stroke="url(#corner)" stroke-width="2.2" stroke-linecap="round"/>`).join("")}
   ${dotEarth(t, { cx: L.x + L.w / 2, cy: L.y + L.h / 2 + 6, r: 176 })}
   ${text("ts · py · js · html", { font: fonts.mono, size: 11.5, x: L.x + 20, y: L.y + L.h - 18, fill: t.faint, track: 0.06 })}
   ${text("main", { font: fonts.mono, size: 11.5, x: L.x + L.w - 20, y: L.y + L.h - 18, anchor: "end", fill: t.faint, track: 0.06 })}
   ${tilesSvg}
-  ${right}`;
+  ${right}
+  <mask id="pm">${PILLS.join("")}</mask>
+  <g mask="url(#pm)"><rect x="0" y="0" width="140" height="${H}" fill="url(#shim)" class="shimmer"/></g>`;
   return svg(W, H, body, { title: "Josiah Oluwadare (datArtist): software engineer, AI and full-stack. Builds: backline, VocaLink, VocaLink-discord-bot, Whatsapp-Receipt-Bot.", css });
 }
 
@@ -304,7 +327,8 @@ export function contrib(k, days) {
   const start = new Date(days[0][0] + "T00:00:00Z");
   const byDate = new Map(days.map((d) => [d[0], d]));
   const cell = 14.4, gap = 3.6, gx = 24, gy = 72;
-  let cells = "", lit = "";
+  let lit = "";
+  const colDots = [];
   const months = [];
   const total = days.reduce((a, d) => a + (d[2] || 0), 0);
   for (let w = 0; w < 53; w++) {
@@ -315,10 +339,10 @@ export function contrib(k, days) {
       if (!e) continue;
       const x = gx + w * (cell + gap), y = gy + d * (cell + gap);
       if (d === 0 && dt.getUTCDate() <= 7) months.push([x, dt.toLocaleString("en", { month: "short", timeZone: "UTC" })]);
-      if (!e[1]) cells += `M${(x + cell / 2).toFixed(1)} ${(y + cell / 2).toFixed(1)}h0`;
+      if (!e[1]) (colDots[w] ??= []).push(`M${(x + cell / 2).toFixed(1)} ${(y + cell / 2).toFixed(1)}h0`);
       else {
         const op = [0, 0.45, 0.65, 0.85, 1][e[1]];
-        lit += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="4" fill="url(#cg)" fill-opacity="${op}" class="cell" style="animation-delay:${(0.4 + w * 0.012).toFixed(2)}s"><title>${key}: ${e[2]} contribution${e[2] === 1 ? "" : "s"}</title></rect>`;
+        lit += `<g class="cell" style="animation-delay:${(0.4 + w * 0.012).toFixed(2)}s"><rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="4" fill="url(#cg)" fill-opacity="${op}" class="breathe" style="animation-delay:${(w * 0.08 + d * 0.2).toFixed(2)}s"/><rect x="${x + 1}" y="${y + 1}" width="${cell - 2}" height="${cell / 2 - 1}" rx="3" fill="#fff" opacity=".22"/></g>`;
         if (e[1] === 4) lit += `<rect x="${x - 3}" y="${y - 3}" width="${cell + 6}" height="${cell + 6}" rx="6" fill="none" stroke="${brand.pink}" stroke-width="1.2" class="glow" style="animation-delay:${(w * 0.05).toFixed(2)}s"/>`;
       }
     }
@@ -326,17 +350,21 @@ export function contrib(k, days) {
   const css = `.cell{opacity:0;animation:pop .6s cubic-bezier(.2,.8,.2,1) forwards}@keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
   .cell{transform-box:fill-box;transform-origin:center}
   .glow{animation:gl 3s ease-in-out infinite}@keyframes gl{0%,100%{opacity:0}50%{opacity:.8}}
+  .wave{animation:wave 4.2s ease-in-out infinite}@keyframes wave{0%,100%{opacity:.55}20%{opacity:1;stroke:${brand.violet}}40%{opacity:.55}}
+  .breathe{animation:br 3.2s ease-in-out infinite}@keyframes br{0%,100%{filter:none}50%{filter:drop-shadow(0 0 6px ${brand.pink})}}
   .scan{animation:scan 7s linear infinite}@keyframes scan{from{transform:translateX(-140px)}to{transform:translateX(${W + 40}px)}}`;
   const body = `<defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${brand.pink}"/><stop offset="1" stop-color="${brand.violet}"/></linearGradient>
     <linearGradient id="sc" x1="0" x2="1"><stop offset="0" stop-color="${brand.violet}" stop-opacity="0"/><stop offset=".5" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.16 : 0.1}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity="0"/></linearGradient>
-    ${sheen("csh", 6, k === "light")}<clipPath id="cc"><rect width="${W}" height="${H}" rx="22"/></clipPath></defs>
+    ${sheen("csh", 6, k === "light")}<clipPath id="cc"><rect width="${W}" height="${H}" rx="22"/></clipPath>
+    <linearGradient id="cspin" x1="0" y1="0" x2="${W}" y2="${H}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${brand.cyan}" stop-opacity=".9"/><stop offset=".33" stop-color="${brand.violet}" stop-opacity=".12"/><stop offset=".66" stop-color="${brand.pink}" stop-opacity=".9"/><stop offset="1" stop-color="${brand.violet}" stop-opacity=".12"/>
+      <animateTransform attributeName="gradientTransform" type="rotate" values="0 ${W / 2} ${H / 2};360 ${W / 2} ${H / 2}" dur="12s" repeatCount="indefinite"/></linearGradient></defs>
     <g clip-path="url(#cc)"><rect width="${W}" height="${H}" fill="${t.bg}"/><rect x="0" y="0" width="140" height="${H}" fill="url(#sc)" class="scan"/></g>
-    <rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="22" stroke="${t.panelLine}"/>
+    <rect x=".75" y=".75" width="${W - 1.5}" height="${H - 1.5}" rx="21.5" stroke="url(#cspin)" stroke-width="1.5"/>
     ${text("CONTRIBUTION.MAP", { font: fonts.monoMed, size: 11, x: 24, y: 34, fill: t.faint, track: 0.22 })}
     ${text(String(total), { font: fonts.display, size: 17, x: W - 24 - width(" contributions in the last year", fonts.body, 14), y: 35, anchor: "end", fill: "url(#csh)" })}
     ${text(" contributions in the last year", { font: fonts.body, size: 14, x: W - 24, y: 34, anchor: "end", fill: t.soft })}
     ${months.map(([x, m]) => text(m, { font: fonts.mono, size: 11, x, y: 60, fill: t.faint })).join("")}
-    <path d="${cells}" stroke="${t.dim}" stroke-width="4" stroke-linecap="round"/>
+    ${colDots.map((c, w) => (c ? `<path d="${c.join("")}" stroke="${t.dim}" stroke-width="4" stroke-linecap="round" class="wave" style="animation-delay:${(w * 0.06).toFixed(2)}s"/>` : "")).join("")}
     ${lit}
     ${text("Less", { font: fonts.mono, size: 11, x: W - 150, y: 214, anchor: "end", fill: t.faint })}
     ${[0.25, 0.45, 0.65, 0.85, 1].map((o, i) => `<rect x="${W - 140 + i * 18}" y="203" width="13" height="13" rx="3.5" fill="${i ? "url(#cg)" : t.dim}" opacity="${i ? o : 1}"/>`).join("")}
@@ -349,7 +377,7 @@ export function button(k, label, { icon = null, primary = false, w = null } = {}
   const t = P[k];
   const fs_ = 15;
   const tw = width(label, fonts.bodySemi, fs_);
-  const W = w ?? Math.ceil(tw + (icon ? 66 : 44)), H = 48;
+  const W = w ?? Math.ceil(tw + (icon ? 70 : 48)), H = 50, R = 21;
   const ICONS = {
     x: `<path d="M3 3l14 14M17 3L3 17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`,
     link: `<path d="M8.5 11.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1M11.5 8.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"/>`,
@@ -357,16 +385,117 @@ export function button(k, label, { icon = null, primary = false, w = null } = {}
     arrow: `<path d="M4 10h11M11 5l5 5-5 5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
   };
   const ink = primary ? "#ffffff" : t.ink;
-  const ix = 20, tx = icon ? 48 : W / 2;
-  const body = `<defs><linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="${brand.violet}"/><stop offset="1" stop-color="${brand.pink}"/></linearGradient>
-    <linearGradient id="spec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${primary ? 0.45 : k === "dark" ? 0.22 : 0.9}"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    <linearGradient id="sweep" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="${primary ? 0.5 : 0.25}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    <clipPath id="bc"><rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="${(H - 2) / 2}"/></clipPath></defs>
-    <rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="${(H - 2) / 2}" fill="${primary ? "url(#bg)" : t.pill}"/>
-    <g clip-path="url(#bc)"><rect x="1" y="1" width="${W - 2}" height="${H / 2}" fill="url(#spec)"/><rect x="-80" y="0" width="60" height="${H}" fill="url(#sweep)" transform="skewX(-18)" class="sw"/></g>
-    <rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="${(H - 2) / 2}" stroke="${primary ? "rgba(255,255,255,.35)" : t.pillLine}"/>
-    ${icon ? `<g transform="translate(${ix} ${H / 2 - 10})" color="${ink}">${ICONS[icon]}</g>` : ""}
-    ${text(label, { font: fonts.bodySemi, size: fs_, x: tx, y: H / 2 + 5.5, anchor: icon ? "start" : "middle", fill: ink })}`;
-  const css = `.sw{animation:sw 5s ease-in-out infinite}@keyframes sw{0%,70%{transform:translateX(0) skewX(-18deg)}100%{transform:translateX(${W + 140}px) skewX(-18deg)}}`;
+  const tx = icon ? 50 : W / 2;
+  const body = `<defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="${W}" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${brand.violet}"/><stop offset=".33" stop-color="${brand.pink}"/><stop offset=".66" stop-color="${brand.violet}"/><stop offset="1" stop-color="${brand.pink}"/>
+      <animateTransform attributeName="gradientTransform" type="translate" values="0 0;${-W * 0.66} 0;0 0" dur="6s" repeatCount="indefinite"/></linearGradient>
+    <linearGradient id="spec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${primary ? 0.42 : k === "dark" ? 0.2 : 0.95}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="sweep" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="${primary ? 0.55 : 0.3}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="${W}" y2="${H}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${brand.cyan}"/><stop offset=".35" stop-color="${brand.violet}" stop-opacity=".1"/><stop offset=".7" stop-color="${brand.pink}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity=".1"/>
+      <animateTransform attributeName="gradientTransform" type="rotate" values="0 ${W / 2} ${H / 2};360 ${W / 2} ${H / 2}" dur="5s" repeatCount="indefinite"/></linearGradient>
+    <radialGradient id="glow" cx="50%" cy="100%" r="70%"><stop offset="0" stop-color="${brand.pink}" stop-opacity=".55"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="0"/></radialGradient>
+    <clipPath id="bc"><rect x="4" y="3" width="${W - 8}" height="${H - 8}" rx="${R}"/></clipPath></defs>
+    ${primary ? `<ellipse cx="${W / 2}" cy="${H - 6}" rx="${W / 2 - 10}" ry="8" fill="url(#glow)" class="pulse"/>` : ""}
+    <rect x="4" y="3" width="${W - 8}" height="${H - 8}" rx="${R}" fill="${primary ? "url(#bg)" : t.pill}"/>
+    <g clip-path="url(#bc)"><rect x="4" y="3" width="${W - 8}" height="${(H - 8) / 2}" fill="url(#spec)"/><rect x="-90" y="0" width="70" height="${H}" fill="url(#sweep)" class="sw"/></g>
+    <rect x="4" y="3" width="${W - 8}" height="${H - 8}" rx="${R}" stroke="${primary ? "rgba(255,255,255,.4)" : "url(#rim)"}" stroke-width="1.3"/>
+    ${icon ? `<g transform="translate(20 ${(H - 2) / 2 - 10})" color="${ink}" class="${icon === "arrow" ? "nudge" : ""}">${ICONS[icon]}</g>` : ""}
+    ${text(label, { font: fonts.bodySemi, size: fs_, x: tx, y: (H - 2) / 2 + 5.5, anchor: icon ? "start" : "middle", fill: ink })}`;
+  const css = `.sw{animation:sw 4.8s ease-in-out infinite;transform:skewX(-18deg)}@keyframes sw{0%,65%{transform:translateX(0) skewX(-18deg)}100%{transform:translateX(${W + 160}px) skewX(-18deg)}}
+  .pulse{animation:pu 2.8s ease-in-out infinite}@keyframes pu{0%,100%{opacity:.45}50%{opacity:1}}
+  .nudge{animation:nu 2.4s ease-in-out infinite}@keyframes nu{0%,60%,100%{transform:translate(20px,${(H - 2) / 2 - 10}px)}75%{transform:translate(25px,${(H - 2) / 2 - 10}px)}}`;
   return { svg: svg(W, H, body, { title: label, css }), w: W };
+}
+
+// ---------- hero banner: name, live status, typing role, liquid gradient sculpture ----------
+function blob(cx, cy, r, seed, n = 8) {
+  const rand = rng(seed);
+  const pts = Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2, rr = r * (0.72 + rand() * 0.5);
+    return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr];
+  });
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${c1.map((v) => v.toFixed(1)).join(" ")} ${c2.map((v) => v.toFixed(1)).join(" ")} ${p2.map((v) => v.toFixed(1)).join(" ")}`;
+  }
+  return d + "Z";
+}
+
+export function hero(k) {
+  const t = P[k];
+  const W = 1012, H = 340;
+  const morph = (cx, cy, r, s, fill, dur) => {
+    const a = blob(cx, cy, r, s), b = blob(cx + 14, cy - 10, r, s + 7), c = blob(cx - 10, cy + 12, r, s + 13);
+    return `<path d="${a}" fill="${fill}"><animate attributeName="d" values="${a};${b};${c};${a}" dur="${dur}s" repeatCount="indefinite" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1;.45 0 .55 1"/>
+      <animateTransform attributeName="transform" type="rotate" values="0 ${cx} ${cy};360 ${cx} ${cy}" dur="${dur * 3}s" repeatCount="indefinite"/></path>`;
+  };
+  // the typing role line
+  const phrases = ["software engineer", "building AI agents that do real work", "TypeScript · Python · Next.js", "full-stack, end to end"];
+  const px = 48, py = 252, n = phrases.length, cycle = 3.6 * n;
+  const pre = "> ";
+  const prew = width(pre, fonts.monoMed, 19);
+  let typing = text(pre, { font: fonts.monoMed, size: 19, x: px, y: py, fill: brand.pink });
+  const cxv = [], ckv = [];
+  phrases.forEach((l, i) => {
+    const lw = width(l, fonts.mono, 19), a = i / n, b = (i + 1) / n, ch = l.length;
+    typing += `<clipPath id="hc${i}"><rect x="${px + prew}" y="${py - 20}" height="28" width="0"><animate attributeName="width" dur="${cycle}s" repeatCount="indefinite" calcMode="discrete" values="${i ? "0;" : ""}0;${Array.from({ length: ch }, (_, q) => (lw * (q + 1) / ch).toFixed(1)).join(";")};0" keyTimes="${i ? "0;" : ""}${a.toFixed(4)};${Array.from({ length: ch }, (_, q) => (a + (b - a) * 0.4 * ((q + 1) / ch)).toFixed(4)).join(";")};${(a + (b - a) * 0.96).toFixed(4)}"/></rect></clipPath>`;
+    typing += `<g clip-path="url(#hc${i})">${text(l, { font: fonts.mono, size: 19, x: px + prew, y: py, fill: t.ink })}</g>`;
+    cxv.push(0); ckv.push(a);
+    for (let q = 1; q <= ch; q++) { cxv.push((lw * q) / ch); ckv.push(a + (b - a) * 0.4 * (q / ch)); }
+  });
+  const kv = ["0"].concat(ckv.slice(1).map((v) => v.toFixed(4)));
+  typing += `<rect x="${px + prew}" y="${py - 17}" width="10" height="21" rx="1.5" fill="${brand.pink}" class="caret"><animate attributeName="x" dur="${cycle}s" repeatCount="indefinite" calcMode="discrete" values="${cxv.map((v) => (px + prew + 2 + v).toFixed(1)).join(";")}" keyTimes="${kv.join(";")}"/></rect>`;
+
+  // glass chips floating over the sculpture
+  const chips = [["agents", 640, 86, 7], ["full-stack", 842, 70, 9], ["real-time", 870, 236, 8], ["TypeScript", 652, 250, 10], ["Python", 770, 160, 11]];
+  const chipSvg = chips.map(([l, x, y, dur], i) => {
+    const w = width(l, fonts.bodySemi, 14) + 30;
+    return `<g class="bob" style="animation-duration:${dur}s;animation-delay:-${i * 1.3}s"><g class="l" style="animation-delay:${(0.9 + i * 0.12).toFixed(2)}s">
+      <rect x="${x}" y="${y}" width="${w}" height="34" rx="17" fill="${k === "dark" ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.62)"}" stroke="url(#hrim)" stroke-width="1.1"/>
+      <rect x="${x + 2}" y="${y + 1.5}" width="${w - 4}" height="15" rx="7.5" fill="url(#hspec)"/>
+      ${text(l, { font: fonts.bodySemi, size: 14, x: x + 15, y: y + 22, fill: t.ink })}</g></g>`;
+  }).join("");
+
+  const statusW = width("Open to collaborations", fonts.bodySemi, 14) + 52;
+  const css = `${twinkleCss}
+  .l{opacity:0;animation:in .7s cubic-bezier(.2,.8,.2,1) forwards}@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .caret{animation:blink 1.05s steps(1) infinite}@keyframes blink{50%{opacity:0}}
+  .bob{animation:bob 8s ease-in-out infinite}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @media (prefers-reduced-motion: reduce){.l{opacity:1}}`;
+  const body = `<defs>
+    ${sheen("hsh", 6, k === "light")}
+    <radialGradient id="o1" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#ffb3d9"/><stop offset=".55" stop-color="${brand.pink}"/><stop offset="1" stop-color="${brand.violet}"/></radialGradient>
+    <radialGradient id="o2" cx="60%" cy="40%" r="70%"><stop offset="0" stop-color="#c9b8ff"/><stop offset=".6" stop-color="${brand.violet}"/><stop offset="1" stop-color="#3a1fb8"/></radialGradient>
+    <radialGradient id="o3" cx="40%" cy="40%" r="70%"><stop offset="0" stop-color="#b8f1ff"/><stop offset="1" stop-color="${brand.cyan}"/></radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${k === "dark" ? 18 : 22}"/></filter>
+    <linearGradient id="hspec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${k === "dark" ? 0.25 : 0.95}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="hrim" x1="0" y1="0" x2="${W}" y2="${H}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${brand.cyan}"/><stop offset=".35" stop-color="#fff" stop-opacity=".2"/><stop offset=".7" stop-color="${brand.pink}"/><stop offset="1" stop-color="#fff" stop-opacity=".2"/>
+      <animateTransform attributeName="gradientTransform" type="rotate" values="0 ${W / 2} ${H / 2};360 ${W / 2} ${H / 2}" dur="9s" repeatCount="indefinite"/></linearGradient>
+    <clipPath id="hc"><rect width="${W}" height="${H}" rx="24"/></clipPath>
+  </defs>
+  <g clip-path="url(#hc)">
+    <rect width="${W}" height="${H}" fill="${t.bg}"/>
+    <g opacity="${k === "dark" ? 0.8 : 0.35}">${stars(80, W, H, 9, t.star)}</g>
+    <g filter="url(#soft)" opacity="${k === "dark" ? 0.85 : 0.75}">
+      ${morph(790, 180, 120, 3, "url(#o2)", 14)}
+      ${morph(700, 130, 80, 11, "url(#o1)", 11)}
+      ${morph(890, 250, 70, 21, "url(#o3)", 12)}
+      ${morph(860, 110, 55, 31, "url(#o1)", 9)}
+    </g>
+  </g>
+  <rect x=".75" y=".75" width="${W - 1.5}" height="${H - 1.5}" rx="23.5" stroke="url(#hrim)" stroke-width="1.5"/>
+  <g class="l" style="animation-delay:.1s">
+    <rect x="48" y="40" width="${statusW}" height="34" rx="17" fill="${k === "dark" ? "rgba(255,255,255,.07)" : "rgba(255,255,255,.75)"}" stroke="url(#hrim)" stroke-width="1.1"/>
+    <rect x="50" y="41.5" width="${statusW - 4}" height="15" rx="7.5" fill="url(#hspec)"/>
+    <circle cx="68" cy="57" r="4.5" fill="#3ddc97"/><circle cx="68" cy="57" r="4.5" fill="none" stroke="#3ddc97" stroke-width="1.6"><animate attributeName="r" values="4.5;12" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="1.8s" repeatCount="indefinite"/></circle>
+    ${text("Open to collaborations", { font: fonts.bodySemi, size: 14, x: 84, y: 62, fill: t.ink })}
+  </g>
+  <g class="l" style="animation-delay:.25s">${text("Josiah", { font: fonts.display, size: 66, x: 44, y: 148, fill: t.ink, track: -0.04 })}</g>
+  <g class="l" style="animation-delay:.4s">${text("Oluwadare", { font: fonts.display, size: 66, x: 44, y: 216, fill: "url(#hsh)", track: -0.04 })}</g>
+  <g class="l" style="animation-delay:.7s">${typing}</g>
+  <g class="l" style="animation-delay:1s">${text("SOFTWARE ENGINEER  ·  AI  ·  FULL-STACK", { font: fonts.bodySemi, size: 12, x: 48, y: 300, fill: t.faint, track: 0.18 })}</g>
+  ${chipSvg}`;
+  return svg(W, H, body, { title: "Josiah Oluwadare: software engineer, AI and full-stack. Open to collaborations.", css });
 }
