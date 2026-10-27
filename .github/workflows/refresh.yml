@@ -1,0 +1,30 @@
+name: Refresh profile
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+  push:
+    paths: ["generator/**"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+        working-directory: generator
+      - run: node build.mjs
+        working-directory: generator
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit if anything changed
+        run: |
+          git config user.name "Josiah"
+          git config user.email "103431970+datArtist-io@users.noreply.github.com"
+          git add assets data.json
+          git diff --cached --quiet || git commit -m "Refresh profile stats and contribution map"
+          git push
