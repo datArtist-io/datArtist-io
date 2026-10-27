@@ -6,10 +6,10 @@
 </a>
 
 <p align="center">
-  <a href="https://linktr.ee/datArtist"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-work-dark.svg"><img alt="Work with me" src="./assets/btn-work-light.svg" height="50"></picture></a>
-  <a href="https://x.com/datartist_io"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-x-dark.svg"><img alt="X: @datartist_io" src="./assets/btn-x-light.svg" height="50"></picture></a>
-  <a href="https://linktr.ee/datArtist"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-links-dark.svg"><img alt="linktr.ee/datArtist" src="./assets/btn-links-light.svg" height="50"></picture></a>
-  <a href="mailto:oluwadare50josiah@gmail.com"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-mail-dark.svg"><img alt="Email me" src="./assets/btn-mail-light.svg" height="50"></picture></a>
+  <a href="https://linktr.ee/datArtist"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-work-dark.svg"><img alt="Work with me" src="./assets/btn-work-light.svg" height="42"></picture></a>
+  <a href="https://x.com/datartist_io"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-x-dark.svg"><img alt="X: @datartist_io" src="./assets/btn-x-light.svg" height="42"></picture></a>
+  <a href="https://linktr.ee/datArtist"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-links-dark.svg"><img alt="linktr.ee/datArtist" src="./assets/btn-links-light.svg" height="42"></picture></a>
+  <a href="mailto:oluwadare50josiah@gmail.com"><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/btn-mail-dark.svg"><img alt="Email me" src="./assets/btn-mail-light.svg" height="42"></picture></a>
 </p>
 
 <a href="https://github.com/datArtist-io?tab=repositories">
