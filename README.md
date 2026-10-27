@@ -1,7 +1,7 @@
 <a href="https://linktr.ee/datArtist">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/card-dark.svg">
-    <img alt="Josiah Oluwadare (datArtist): AI engineer and full-stack builder in Ibadan, Nigeria. Studio: Josiahlabs, AI ad films. Builds: backline, VocaLink, VocaLink-discord-bot, Whatsapp-Receipt-Bot." src="./assets/card-light.svg" width="100%">
+    <img alt="Josiah Oluwadare (datArtist): software engineer, AI and full-stack. Builds: backline, VocaLink, VocaLink-discord-bot, Whatsapp-Receipt-Bot." src="./assets/card-light.svg" width="100%">
   </picture>
 </a>
 

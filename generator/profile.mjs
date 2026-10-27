@@ -1,23 +1,23 @@
-// Josiah's GitHub profile: an identity card (dot-matrix Earth over Ibadan + a glass info panel),
+// Josiah's GitHub profile: an identity card (a dot-matrix Earth carrying network traffic + a glass info panel),
 // a contribution map, and glass buttons. Same design language as his work: Liquid Glass panels,
 // pill chips, a sliding segmented switch, the pink→violet→cyan sheen, Unbounded + Hanken Grotesk.
 import { fonts, text, width, svg, stars, twinkleCss, themes, sheen, brand, rng, write } from "./lib.mjs";
-import { geoOrthographic, geoContains } from "d3-geo";
+import { geoOrthographic, geoContains, geoInterpolate, geoDistance } from "d3-geo";
 import { feature } from "topojson-client";
 import fs from "node:fs";
 
 const topo = JSON.parse(fs.readFileSync(new URL("./node_modules/world-atlas/land-110m.json", import.meta.url)));
 const LAND = feature(topo, topo.objects.land);
-const IBADAN = [3.947, 7.378];
 
 const P = {
   dark: { ...themes.dark, panel: "rgba(255,255,255,0.045)", panelLine: "rgba(255,255,255,0.10)", key: "#ff7ab8", dot: "#c9cdf5", dim: "#3a3f6b", lead: "rgba(185,189,217,0.28)", pill: "rgba(255,255,255,0.06)", pillLine: "rgba(255,255,255,0.13)" },
   light: { ...themes.light, panel: "rgba(255,255,255,0.78)", panelLine: "rgba(16,19,43,0.09)", key: "#d6337f", dot: "#2b3270", dim: "#c9cde6", lead: "rgba(16,19,43,0.22)", pill: "rgba(255,255,255,0.9)", pillLine: "rgba(16,19,43,0.12)" },
 };
 
-// ---------- the dot-matrix Earth ----------
+// ---------- a dot-matrix Earth carrying network traffic ----------
 function dotEarth(t, { cx, cy, r, step = 6.4 }) {
-  const proj = geoOrthographic().scale(r).translate([cx, cy]).rotate([-14, -4, 0]).clipAngle(90);
+  const rot = [-14, -12, 0];
+  const proj = geoOrthographic().scale(r).translate([cx, cy]).rotate(rot).clipAngle(90);
   const rand = rng(23);
   const groups = Array.from({ length: 36 }, () => []);
   const accent = [];
@@ -27,34 +27,101 @@ function dotEarth(t, { cx, cy, r, step = 6.4 }) {
       const dx = x - cx, dy = y - cy;
       if (dx * dx + dy * dy > (r - 2) * (r - 2)) continue;
       const ll = proj.invert([x, y]);
-      if (ll && geoContains(LAND, ll)) {
-        const k = Math.floor(rand() * groups.length);
-        (rand() < 0.06 ? accent : groups[k]).push(`M${x.toFixed(1)} ${y.toFixed(1)}h0`);
-      } else if (rand() < 0.42) ocean += `M${x.toFixed(1)} ${y.toFixed(1)}h0`;
+      if (ll && geoContains(LAND, ll)) (rand() < 0.06 ? accent : groups[Math.floor(rand() * groups.length)]).push(`M${x.toFixed(1)} ${y.toFixed(1)}h0`);
+      else if (rand() < 0.42) ocean += `M${x.toFixed(1)} ${y.toFixed(1)}h0`;
     }
   }
-  const g = (d, cls, i) => {
+  const g = (d, cls) => {
     const a = rand() * Math.PI * 2, dist = 30 + rand() * 70;
     return `<path class="${cls}" style="--dx:${(Math.cos(a) * dist).toFixed(0)}px;--dy:${(Math.sin(a) * dist).toFixed(0)}px;animation-delay:${(rand() * 0.9).toFixed(2)}s" d="${d}"/>`;
   };
-  const ib = proj(IBADAN);
+  // network links between regions, packets travelling along them
+  const nodes = [[-0.1, 51.5], [2.3, 48.9], [13.4, 52.5], [-9.1, 38.7], [3.4, 6.5], [36.8, -1.3], [31.2, 30.0], [55.3, 25.2], [18.4, -33.9], [-74, 40.7], [77.2, 28.6], [-46.6, -23.5]];
+  const center = [-rot[0], -rot[1]];
+  const vis = nodes.filter((n) => geoDistance(n, center) < Math.PI / 2 - 0.12);
+  const pairs = [[0, 4], [4, 7], [2, 6], [3, 9], [5, 8], [1, 5], [6, 10], [4, 11], [0, 7], [8, 4]];
+  let links = "";
+  pairs.forEach(([a, b], i) => {
+    const A = nodes[a], B = nodes[b];
+    if (!vis.includes(A) || !vis.includes(B)) return;
+    const ip = geoInterpolate(A, B);
+    const pts = [];
+    for (let k = 0; k <= 40; k++) {
+      const p = proj(ip(k / 40));
+      const h = 1 + 0.16 * Math.sin((Math.PI * k) / 40);
+      pts.push(`${(cx + (p[0] - cx) * h).toFixed(1)} ${(cy + (p[1] - cy) * h).toFixed(1)}`);
+    }
+    const d = "M" + pts.join(" L");
+    const dur = (3.2 + (i % 4) * 0.7).toFixed(1), begin = (i * 0.45).toFixed(2);
+    links += `<path d="${d}" stroke="url(#rim)" stroke-width="1.1" opacity=".38"/>
+      <circle r="2.6" fill="${i % 2 ? brand.cyan : brand.pink}" style="filter:drop-shadow(0 0 4px ${i % 2 ? brand.cyan : brand.pink})"><animateMotion dur="${dur}s" begin="${begin}s" repeatCount="indefinite" path="${d}"/></circle>`;
+  });
+  const hubs = vis.map((n, i) => { const p = proj(n); return `<g transform="translate(${p[0].toFixed(1)} ${p[1].toFixed(1)})"><circle r="2.8" fill="${t.ink}"/><circle r="2.8" fill="none" stroke="${brand.violet}" stroke-width="1.2"><animate attributeName="r" values="2.8;13" dur="2.8s" begin="${(i * 0.37).toFixed(2)}s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2.8s" begin="${(i * 0.37).toFixed(2)}s" repeatCount="indefinite"/></circle></g>`; }).join("");
   return `
     <circle cx="${cx}" cy="${cy}" r="${r + 26}" fill="url(#halo)"/>
     <path d="${ocean}" stroke="${t.dim}" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
-    ${groups.map((d, i) => (d.length ? g(d.join(""), "p", i) : "")).join("")}
-    ${g(accent.join(""), "p acc", 99)}
+    ${groups.map((d) => (d.length ? g(d.join(""), "p") : "")).join("")}
+    ${g(accent.join(""), "p acc")}
     <circle cx="${cx}" cy="${cy}" r="${r}" stroke="url(#rim)" stroke-width="1.2" opacity=".8"/>
+    <g class="l" style="animation-delay:1.3s">${links}${hubs}</g>
     <ellipse cx="${cx}" cy="${cy}" rx="${r + 40}" ry="${(r + 40) * 0.24}" stroke="${t.panelLine}" transform="rotate(-16 ${cx} ${cy})"/>
-    <circle r="3" fill="${brand.cyan}"><animateMotion dur="16s" repeatCount="indefinite" path="M${cx - r - 40} ${cy} a${r + 40} ${(r + 40) * 0.24} 0 1 0 ${2 * (r + 40)} 0 a${r + 40} ${(r + 40) * 0.24} 0 1 0 ${-2 * (r + 40)} 0" rotate="0"/></circle>
-    <g transform="translate(${ib[0].toFixed(1)} ${ib[1].toFixed(1)})" class="l" style="animation-delay:1.3s">
-      <circle r="4.5" fill="${brand.pink}"/>
-      <circle r="4.5" fill="none" stroke="${brand.pink}" stroke-width="1.6"><animate attributeName="r" values="4.5;26" dur="2.6s" repeatCount="indefinite"/><animate attributeName="opacity" values=".95;0" dur="2.6s" repeatCount="indefinite"/></circle>
-      <path d="M0 0 L54 -46 H70" stroke="${brand.pink}" stroke-width="1.2" opacity=".85"/>
-    </g>
-    <g class="l" style="animation-delay:1.5s">
-      <rect x="${ib[0] + 70}" y="${ib[1] - 62}" width="150" height="34" rx="17" fill="${t.name === "dark" ? "rgba(13,16,48,.85)" : "rgba(255,255,255,.95)"}" stroke="${t.pillLine}"/>
-      ${text("Ibadan, Nigeria", { font: fonts.bodySemi, size: 13.5, x: ib[0] + 86, y: ib[1] - 40, fill: t.ink })}
-    </g>`;
+    <circle r="3" fill="${brand.cyan}"><animateMotion dur="16s" repeatCount="indefinite" path="M${cx - r - 40} ${cy} a${r + 40} ${(r + 40) * 0.24} 0 1 0 ${2 * (r + 40)} 0 a${r + 40} ${(r + 40) * 0.24} 0 1 0 ${-2 * (r + 40)} 0"/></circle>`;
+}
+
+// ---------- a dot-matrix </> that assembles itself ----------
+function flatten(path) {
+  const polys = []; let cur = [], x = 0, y = 0;
+  for (const c of path.commands) {
+    if (c.type === "M") { if (cur.length) polys.push(cur); cur = [[c.x, c.y]]; x = c.x; y = c.y; }
+    else if (c.type === "L") { cur.push([c.x, c.y]); x = c.x; y = c.y; }
+    else if (c.type === "Q") { for (let k = 1; k <= 8; k++) { const t = k / 8, a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, d = t * t; cur.push([a * x + b * c.x1 + d * c.x, a * y + b * c.y1 + d * c.y]); } x = c.x; y = c.y; }
+    else if (c.type === "C") { for (let k = 1; k <= 10; k++) { const t = k / 10, u = 1 - t; cur.push([u*u*u*x + 3*u*u*t*c.x1 + 3*u*t*t*c.x2 + t*t*t*c.x, u*u*u*y + 3*u*u*t*c.y1 + 3*u*t*t*c.y2 + t*t*t*c.y]); } x = c.x; y = c.y; }
+    else if (c.type === "Z") { if (cur.length) polys.push(cur); cur = []; }
+  }
+  if (cur.length) polys.push(cur);
+  return polys;
+}
+function inside(polys, px, py) {
+  let n = 0;
+  for (const p of polys) for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+    const [xi, yi] = p[i], [xj, yj] = p[j];
+    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) n++;
+  }
+  return n % 2 === 1;
+}
+function glyphDots(t, { cx, cy, w, step = 5.4 }) {
+  // </> drawn as three thick strokes, filled with dots
+  const k = w / 330;
+  const segs = [
+    [[cx - 92 * k, cy - 74 * k], [cx - 165 * k, cy]], [[cx - 165 * k, cy], [cx - 92 * k, cy + 74 * k]],
+    [[cx + 34 * k, cy - 100 * k], [cx - 34 * k, cy + 100 * k]],
+    [[cx + 92 * k, cy - 74 * k], [cx + 165 * k, cy]], [[cx + 165 * k, cy], [cx + 92 * k, cy + 74 * k]],
+  ];
+  const half = 15 * k;
+  const near = (x, y) => segs.some(([[ax, ay], [bx, by]]) => {
+    const vx = bx - ax, vy = by - ay, t_ = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)));
+    const dx = x - (ax + t_ * vx), dy = y - (ay + t_ * vy);
+    return dx * dx + dy * dy <= half * half;
+  });
+  const rand = rng(31);
+  const groups = Array.from({ length: 36 }, () => []);
+  const accent = [];
+  let field = "";
+  const x0 = cx - 200, x1 = cx + 200, y0 = cy - 250, y1 = cy + 250;
+  for (let y = y0; y <= y1; y += step) for (let x = x0; x <= x1; x += step) {
+    if (near(x, y)) (rand() < 0.08 ? accent : groups[Math.floor(rand() * groups.length)]).push(`M${x.toFixed(1)} ${y.toFixed(1)}h0`);
+    else if (rand() < 0.12) field += `M${x.toFixed(1)} ${y.toFixed(1)}h0`;
+  }
+  const g = (d, cls) => {
+    const a = rand() * Math.PI * 2, dist = 40 + rand() * 90;
+    return `<path class="${cls}" style="--dx:${(Math.cos(a) * dist).toFixed(0)}px;--dy:${(Math.sin(a) * dist).toFixed(0)}px;animation-delay:${(rand() * 0.9).toFixed(2)}s" d="${d}"/>`;
+  };
+  // a slow scan line, like a build log passing over the mark
+  return `<circle cx="${cx}" cy="${cy}" r="230" fill="url(#glow)"/>
+    <path d="${field}" stroke="${t.dim}" stroke-width="1.6" stroke-linecap="round" opacity=".55"/>
+    ${groups.map((d) => (d.length ? g(d.join(""), "p") : "")).join("")}
+    ${g(accent.join(""), "p acc")}
+    <rect x="${x0}" y="${y0}" width="${x1 - x0}" height="2" fill="url(#rim)" opacity=".5" class="scanv"/>`;
 }
 
 // ---------- info panel rows ----------
@@ -82,14 +149,14 @@ function pills(t, x, y, items, delay, max) {
   return { svg: `<g class="l" style="animation-delay:${delay}s">${out}</g>`, bottom: cy + 24 };
 }
 
-// ---------- the sliding segmented switch (Build · Film · Learn) ----------
+// ---------- the sliding segmented switch (Build · Ship · Learn) ----------
 function modeSwitch(t, x, y, w) {
-  const seg = ["Build", "Film", "Learn"];
+  const seg = ["Build", "Ship", "Learn"];
   const sw = (w - 8) / 3;
   const captions = [
-    "AI agents and full-stack products that do real work",
-    "AI advertisement films for brands, at Josiahlabs",
-    "Mechanical engineer (FUTA) turned AI engineer",
+    "Agents, APIs and real-time systems, end to end",
+    "Typed, tested, documented, deployed on Vercel",
+    "Deep in AI engineering: agents, voice, retrieval",
   ];
   const cycle = 10.5;
   return `<g class="l" style="animation-delay:.95s">
@@ -137,10 +204,10 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
   let right = `<g class="l" style="animation-delay:.25s">${text("josiah@datartist", { font: fonts.monoMed, size: 15, x: x0, y, fill: "url(#psh)" })}<line x1="${x0 + width("josiah@datartist", fonts.monoMed, 15) + 12}" y1="${y - 5}" x2="${x1}" y2="${y - 5}" stroke="${t.lead}" stroke-width="1"/></g>`;
   const rows = [
     ["Name", "Josiah Oluwadare"],
-    ["Role", "AI engineer · full-stack builder"],
-    ["Studio", "Josiahlabs · AI ad films"],
-    ["Base", "Ibadan, Nigeria · WAT"],
-    ["Status", "Building agents that do real work"],
+    ["Role", "Software engineer · AI & full-stack"],
+    ["Focus", "Agents that do real work"],
+    ["Languages", "TypeScript · Python · JavaScript"],
+    ["Status", "Shipping backline"],
   ];
   rows.forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (0.32 + i * 0.06).toFixed(2))));
   y += 22;
@@ -149,10 +216,10 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
   right += rule(t, y, "Stack", x0, x1, 1.05);
   const groups = [
     ["Frontend", ["Next.js", "React", "TypeScript", "Three.js", "WebGL"]],
-    ["Backend", ["Python", "Node.js", "Discord API", "Supabase", "PostgreSQL"]],
+    ["Backend", ["Python", "Node.js", "Next.js API", "Discord API"]],
     ["AI", ["Claude API", "Vapi", "Qloo", "Agents", "Voice"]],
-    ["Film", ["Higgsfield", "ElevenLabs", "CapCut"]],
-    ["Ship", ["Vercel", "GitHub"]],
+    ["Data", ["Supabase", "PostgreSQL", "Row-level security"]],
+    ["Ship", ["Vercel", "GitHub Actions", "Vitest", "Zod"]],
   ];
   y += 12;
   groups.forEach(([g, items], i) => {
@@ -172,8 +239,8 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
   ];
   builds.forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (1.5 + i * 0.06).toFixed(2))));
   y += 36;
-  right += rule(t, y, "Background", x0, x1, 1.8);
-  [["Degree", "B.Eng Mechanical Engineering · FUTA"], ["Leadership", "Class rep, 100–500 level"]].forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (1.85 + i * 0.06).toFixed(2))));
+  right += rule(t, y, "Engineering", x0, x1, 1.8);
+  [["Types", "TypeScript strict · Zod at every boundary"], ["Tests", "Vitest · synthetic fixtures"], ["Security", "RLS · sealed approvals · fail-closed"]].forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (1.85 + i * 0.06).toFixed(2))));
   y += 36;
   right += rule(t, y, "Contact", x0, x1, 2.0);
   [["X", "@datartist_io"], ["Links", "linktr.ee/datArtist"]].forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (2.05 + i * 0.06).toFixed(2))));
@@ -194,7 +261,7 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
 
   // the sliding thumb and captions run on one 10.5 s cycle
   const css = `${twinkleCss}
-  .p{fill:none;stroke:${t.dot};stroke-width:2.3;stroke-linecap:round;animation:cyc 12s cubic-bezier(.45,0,.2,1) infinite both}
+  .p{fill:none;stroke:${t.dot};stroke-width:2.6;stroke-linecap:round;animation:cyc 12s cubic-bezier(.45,0,.2,1) infinite both}
   .acc{stroke:${brand.pink};stroke-width:2.6}
   @keyframes cyc{0%{opacity:0;transform:translate(var(--dx),var(--dy))}12%{opacity:1;transform:none}82%{opacity:1;transform:none}100%{opacity:0;transform:translate(calc(var(--dx)*-1),calc(var(--dy)*-1))}}
   .l{opacity:0;animation:in .5s ease-out forwards}@keyframes in{to{opacity:1}}
@@ -203,11 +270,13 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
   @keyframes slide{0%,28%{transform:translateX(0)}33.3%,61%{transform:translateX(${((x1 - x0 - 8) / 3).toFixed(1)}px)}66.6%,94%{transform:translateX(${((2 * (x1 - x0 - 8)) / 3).toFixed(1)}px)}100%{transform:translateX(0)}}
   .cap{opacity:0;animation:cap 10.5s ease-in-out infinite}.c1{animation-delay:3.5s}.c2{animation-delay:7s}
   @keyframes cap{0%{opacity:0;transform:translateY(5px)}4%,27%{opacity:1;transform:none}32%,100%{opacity:0}}
+  .scanv{animation:scanv 6s ease-in-out infinite}@keyframes scanv{0%{transform:translateY(0);opacity:0}10%{opacity:.6}90%{opacity:.6}100%{transform:translateY(440px);opacity:0}}
   @media (prefers-reduced-motion: reduce){.p,.l,.cap.c0{opacity:1}}`;
 
   const body = `<defs>
     <radialGradient id="n1" cx="20%" cy="30%" r="55%"><stop offset="0" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.3 : 0.16}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity="0"/></radialGradient>
     <radialGradient id="n2" cx="95%" cy="95%" r="50%"><stop offset="0" stop-color="${brand.pink}" stop-opacity="${k === "dark" ? 0.22 : 0.12}"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.22 : 0.12}"/><stop offset="1" stop-color="${brand.violet}" stop-opacity="0"/></radialGradient>
     <radialGradient id="halo"><stop offset=".72" stop-color="${brand.violet}" stop-opacity="0"/><stop offset=".86" stop-color="${brand.violet}" stop-opacity="${k === "dark" ? 0.28 : 0.18}"/><stop offset="1" stop-color="${brand.pink}" stop-opacity="0"/></radialGradient>
     <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${brand.cyan}"/><stop offset=".5" stop-color="${brand.violet}"/><stop offset="1" stop-color="${brand.pink}"/></linearGradient>
     <linearGradient id="corner" x1="0" x2="1"><stop offset="0" stop-color="${brand.pink}"/><stop offset="1" stop-color="${brand.violet}"/></linearGradient>
@@ -216,15 +285,15 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
   </defs>
   <rect width="${W}" height="${H}" rx="22" fill="${t.bg}"/><rect width="${W}" height="${H}" rx="22" fill="url(#n1)"/><rect width="${W}" height="${H}" rx="22" fill="url(#n2)"/>
   <g opacity="${k === "dark" ? 0.8 : 0.35}">${stars(90, W, H, 5, t.star)}</g>
-  ${text("FIELD.MAP", { font: fonts.monoMed, size: 11, x: L.x, y: 34, fill: t.faint, track: 0.22 })}
+  ${text("NETWORK.MAP", { font: fonts.monoMed, size: 11, x: L.x, y: 34, fill: t.faint, track: 0.22 })}
   <rect x="${L.x}" y="${L.y}" width="${L.w}" height="${L.h}" rx="18" fill="${t.panel}" stroke="${t.panelLine}"/>
   ${[[L.x, L.y, 1, 1], [L.x + L.w, L.y, -1, 1], [L.x, L.y + L.h, 1, -1], [L.x + L.w, L.y + L.h, -1, -1]].map(([cx, cy, sx, sy]) => `<path d="M${cx + 22 * sx} ${cy} H${cx + 8 * sx} Q${cx} ${cy} ${cx} ${cy + 8 * sy} V${cy + 22 * sy}" stroke="url(#corner)" stroke-width="2.2" stroke-linecap="round"/>`).join("")}
   ${dotEarth(t, { cx: L.x + L.w / 2, cy: L.y + L.h / 2 + 6, r: 176 })}
-  ${text("7.38°N  3.95°E", { font: fonts.mono, size: 11.5, x: L.x + 20, y: L.y + L.h - 18, fill: t.faint, track: 0.06 })}
-  ${text("UTC+01:00", { font: fonts.mono, size: 11.5, x: L.x + L.w - 20, y: L.y + L.h - 18, anchor: "end", fill: t.faint, track: 0.06 })}
+  ${text("ts · py · js · html", { font: fonts.mono, size: 11.5, x: L.x + 20, y: L.y + L.h - 18, fill: t.faint, track: 0.06 })}
+  ${text("main", { font: fonts.mono, size: 11.5, x: L.x + L.w - 20, y: L.y + L.h - 18, anchor: "end", fill: t.faint, track: 0.06 })}
   ${tilesSvg}
   ${right}`;
-  return svg(W, H, body, { title: "Josiah Oluwadare (datArtist): AI engineer and full-stack builder in Ibadan, Nigeria. Studio: Josiahlabs, AI ad films. Builds: backline, VocaLink, VocaLink-discord-bot, Whatsapp-Receipt-Bot.", css });
+  return svg(W, H, body, { title: "Josiah Oluwadare (datArtist): software engineer, AI and full-stack. Builds: backline, VocaLink, VocaLink-discord-bot, Whatsapp-Receipt-Bot.", css });
 }
 
 // ---------- contribution map (real calendar, last 12 months) ----------
