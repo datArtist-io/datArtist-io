@@ -208,6 +208,7 @@ export function card(k, stats = { repos: 5, contributions: 107, languages: 4, fo
     ["Focus", "Agents that do real work"],
     ["Languages", "TypeScript · Python · JavaScript"],
     ["Status", "Shipping backline"],
+    ["Education", "B.Eng Mechanical Engineering · FUTA"],
   ];
   rows.forEach(([a, b], i) => (right += row(t, (y += 24), a, b, x0, x1, (0.32 + i * 0.06).toFixed(2))));
   y += 22;
